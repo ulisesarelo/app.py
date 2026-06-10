@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARLINOST - Inicio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <h1>🚀 ARLINOST</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">Inicio</a></li>
+                <li><a href="/login" class="btn-login">Ingresar</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Bienvenido a ARLINOST</h1>
+            <p>La plataforma de conexión entre clientes y prestadores de servicios</p>
+            <div class="hero-buttons">
+                <a href="/login" class="btn btn-primary">Ingresar</a>
+                <a href="#features" class="btn btn-secondary">Conocer más</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Características Principales</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">👤</div>
+                    <h3>Para Clientes</h3>
+                    <p>Solicita servicios, seguimiento en tiempo real y califica prestadores</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔧</div>
+                    <h3>Para Prestadores</h3>
+                    <p>Ofrece tus servicios, gestiona solicitudes y construye tu reputación</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⭐</div>
+                    <h3>Sistema de Calificación</h3>
+                    <p>Calificaciones transparentes y reputación basada en comentarios reales</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Estadísticas en Tiempo Real</h3>
+                    <p>Seguimiento completo de solicitudes y desempeño</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>¿Listo para comenzar?</h2>
+            <a href="/login" class="btn btn-primary btn-large">Ingresar Ahora</a>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2024 ARLINOST. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
