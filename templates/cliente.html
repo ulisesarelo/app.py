@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARLINOST - Dashboard Cliente</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <h1>🚀 ARLINOST</h1>
+            </div>
+            <ul class="nav-links">
+                <li><span id="userInfo" style="color: #6366f1; font-weight: 600;"></span></li>
+                <li><a href="#" onclick="logout()" class="btn-login">Salir</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 30px;">
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3 style="margin-bottom: 20px;">Panel de Control</h3>
+                <ul class="sidebar-menu">
+                    <li><a href="#" onclick="showSection('solicitudes')" class="active">📋 Mis Solicitudes</a></li>
+                    <li><a href="#" onclick="showSection('prestadores')">🔧 Prestadores</a></li>
+                    <li><a href="#" onclick="showSection('crear')">➕ Crear Solicitud</a></li>
+                    <li><a href="#" onclick="showSection('estadisticas')">📊 Estadísticas</a></li>
+                </ul>
+            </div>
+
+            <div class="content">
+                <!-- Solicitudes -->
+                <div id="solicitudes-section" class="section">
+                    <h2>Mis Solicitudes</h2>
+                    <div id="solicitudes-list" style="margin-top: 20px;"></div>
+                </div>
+
+                <!-- Prestadores -->
+                <div id="prestadores-section" class="section" style="display: none;">
+                    <h2>Prestadores Disponibles</h2>
+                    <div id="prestadores-list" style="margin-top: 20px;"></div>
+                </div>
+
+                <!-- Crear Solicitud -->
+                <div id="crear-section" class="section" style="display: none;">
+                    <h2>Crear Nueva Solicitud</h2>
+                    <form id="crearSolicitudForm" style="margin-top: 20px;">
+                        <div class="form-group">
+                            <label>Descripción del servicio:</label>
+                            <textarea id="descripcion" name="descripcion" required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: Arial;" rows="5"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Prioridad:</label>
+                            <select id="prioridad" name="prioridad" style="width: 100%;">
+                                <option value="1">Baja (1)</option>
+                                <option value="2">Normal Baja (2)</option>
+                                <option value="3" selected>Normal (3)</option>
+                                <option value="4">Alta (4)</option>
+                                <option value="5">Muy Alta (5)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Crear Solicitud</button>
+                    </form>
+                </div>
+
+                <!-- Estadísticas -->
+                <div id="estadisticas-section" class="section" style="display: none;">
+                    <h2>Estadísticas</h2>
+                    <div id="estadisticas-content" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 ARLINOST. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const usuario = JSON.parse(localStorage.getItem('usuario'));
+
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        document.getElementById('userInfo').textContent = `👤 ${usuario.usuario}`;
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('usuario');
+            window.location.href = '/';
+        }
+
+        async function showSection(section) {
+            // Actualizar menu activo
+            document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Mostrar/ocultar secciones
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+            document.getElementById(section + '-section').style.display = 'block';
+
+            if (section === 'solicitudes') {
+                loadMisSolicitudes();
+            } else if (section === 'prestadores') {
+                loadPrestadores();
+            } else if (section === 'estadisticas') {
+                loadEstadisticas();
+            }
+        }
+
+        async function loadMisSolicitudes() {
+            try {
+                const response = await fetch('/api/solicitudes?cliente_id=' + usuario.usuario_id, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+
+                let html = '';
+                if (data.solicitudes.length === 0) {
+                    html = '<p style="color: #64748b;">No tienes solicitudes. <a href="#" onclick="showSection(\'crear\')" style="color: #6366f1; font-weight: 600;">Crea una aquí</a></p>';
+                } else {
+                    data.solicitudes.forEach(sol => {
+                        const statusClass = `status-${sol.estado}`;
+                        html += `
+                            <div class="card">
+                                <h3>${sol.descripcion}</h3>
+                                <p><strong>ID:</strong> ${sol.solicitud_id}</p>
+                                <p><strong>Prioridad:</strong> ${'⭐'.repeat(sol.prioridad)}</p>
+                                <span class="card-status ${statusClass}">${sol.estado.toUpperCase()}</span>
+                            </div>
+                        `;
+                    });
+                }
+                document.getElementById('solicitudes-list').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadPrestadores() {
+            try {
+                const response = await fetch('/api/prestadores', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+
+                let html = '';
+                data.prestadores.forEach(pres => {
+                    html += `
+                        <div class="card">
+                            <h3>${pres.nombre}</h3>
+                            <p><strong>Email:</strong> ${pres.email}</p>
+                            <p><strong>Calificación:</strong> ${'⭐'.repeat(Math.round(pres.calificacion_promedio))} (${pres.calificacion_promedio})</p>
+                        </div>
+                    `;
+                });
+                document.getElementById('prestadores-list').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadEstadisticas() {
+            try {
+                const response = await fetch('/api/estadisticas', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                const stats = data.estadisticas_sistema;
+
+                let html = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div class="card">
+                            <h4>📋 Total de Solicitudes</h4>
+                            <p style="font-size: 32px; color: #6366f1; font-weight: bold;">${stats.total_solicitudes}</p>
+                        </div>
+                        <div class="card">
+                            <h4>⏳ Pendientes</h4>
+                            <p style="font-size: 32px; color: #f59e0b; font-weight: bold;">${stats.solicitudes_pendientes}</p>
+                        </div>
+                        <div class="card">
+                            <h4>✅ Completadas</h4>
+                            <p style="font-size: 32px; color: #10b981; font-weight: bold;">${stats.solicitudes_completadas}</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('estadisticas-content').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        document.getElementById('crearSolicitudForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                cliente_id: usuario.usuario_id,
+                descripcion: document.getElementById('descripcion').value,
+                prioridad: parseInt(document.getElementById('prioridad').value)
+            };
+
+            try {
+                const response = await fetch('/api/solicitudes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('¡Solicitud creada exitosamente!');
+                    document.getElementById('crearSolicitudForm').reset();
+                    showSection('solicitudes');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error de conexión');
+            }
+        });
+
+        // Cargar solicitudes al iniciar
+        loadMisSolicitudes();
+    </script>
+</body>
+</html>
