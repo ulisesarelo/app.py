@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARLINOST - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <h1>🚀 ARLINOST</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">Inicio</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="form-container">
+        <h2 style="text-align: center; margin-bottom: 30px; color: #6366f1;">Inicia Sesión</h2>
+        
+        <div id="alert-container"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="usuario_id">Nombre de Usuario:</label>
+                <input type="text" id="usuario_id" name="usuario_id" required placeholder="ej: cli001">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                Ingresar
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <p style="color: #64748b;">¿No tienes cuenta? <a href="#" onclick="toggleRegister()" style="color: #6366f1; text-decoration: none; font-weight: 600;">Regístrate aquí</a></p>
+        </div>
+
+        <div id="registerForm" style="display: none; margin-top: 30px; padding-top: 30px; border-top: 1px solid #e2e8f0;">
+            <h3 style="text-align: center; color: #6366f1; margin-bottom: 20px;">Crear Cuenta</h3>
+            
+            <form id="signupForm">
+                <div class="form-group">
+                    <label for="reg_usuario_id">ID de Usuario:</label>
+                    <input type="text" id="reg_usuario_id" name="usuario_id" required placeholder="ej: cli001">
+                </div>
+
+                <div class="form-group">
+                    <label for="reg_usuario">Nombre:</label>
+                    <input type="text" id="reg_usuario" name="usuario" required placeholder="Tu nombre">
+                </div>
+
+                <div class="form-group">
+                    <label for="reg_email">Email:</label>
+                    <input type="email" id="reg_email" name="email" required placeholder="tu@email.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="reg_password">Contraseña:</label>
+                    <input type="password" id="reg_password" name="password" required placeholder="••••••••">
+                </div>
+
+                <div class="form-group">
+                    <label for="reg_rol">Tipo de Usuario:</label>
+                    <select id="reg_rol" name="rol" required>
+                        <option value="">Selecciona una opción</option>
+                        <option value="cliente">Cliente</option>
+                        <option value="prestador">Prestador</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 20px;">
+                    Crear Cuenta
+                </button>
+                <button type="button" onclick="toggleRegister()" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">
+                    Cancelar
+                </button>
+            </form>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+            <h4 style="color: #1e293b; margin-bottom: 10px;">📝 Usuarios de Prueba:</h4>
+            <ul style="color: #64748b; font-size: 14px; line-height: 1.8;">
+                <li><strong>Cliente:</strong> usuario: cli001 | contraseña: password123</li>
+                <li><strong>Cliente:</strong> usuario: cli002 | contraseña: password123</li>
+                <li><strong>Prestador:</strong> usuario: pres001 | contraseña: password123</li>
+                <li><strong>Prestador:</strong> usuario: pres002 | contraseña: password123</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 ARLINOST. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function toggleRegister() {
+            const form = document.getElementById('registerForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const usuario_id = document.getElementById('usuario_id').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario_id, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('usuario', JSON.stringify(data.usuario));
+                    
+                    // Redirigir según rol
+                    if (data.usuario.rol === 'cliente') {
+                        window.location.href = '/cliente';
+                    } else if (data.usuario.rol === 'prestador') {
+                        window.location.href = '/prestador';
+                    }
+                } else {
+                    showAlert(data.error || 'Error en la autenticación', 'error');
+                }
+            } catch (error) {
+                showAlert('Error de conexión', 'error');
+            }
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                usuario_id: document.getElementById('reg_usuario_id').value,
+                usuario: document.getElementById('reg_usuario').value,
+                email: document.getElementById('reg_email').value,
+                password: document.getElementById('reg_password').value,
+                rol: document.getElementById('reg_rol').value
+            };
+            
+            try {
+                const response = await fetch('/api/auth/registro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert('¡Cuenta creada exitosamente! Inicia sesión ahora.', 'success');
+                    document.getElementById('signupForm').reset();
+                    setTimeout(() => toggleRegister(), 2000);
+                } else {
+                    showAlert(data.error || 'Error al crear la cuenta', 'error');
+                }
+            } catch (error) {
+                showAlert('Error de conexión', 'error');
+            }
+        });
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.innerHTML = '';
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+    </script>
+</body>
+</html>
