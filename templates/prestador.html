@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARLINOST - Dashboard Prestador</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <h1>🚀 ARLINOST</h1>
+            </div>
+            <ul class="nav-links">
+                <li><span id="userInfo" style="color: #6366f1; font-weight: 600;"></span></li>
+                <li><a href="#" onclick="logout()" class="btn-login">Salir</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 30px;">
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3 style="margin-bottom: 20px;">Panel de Control</h3>
+                <ul class="sidebar-menu">
+                    <li><a href="#" onclick="showSection('solicitudes')" class="active">📋 Solicitudes Disponibles</a></li>
+                    <li><a href="#" onclick="showSection('misTareas')">⚙️ Mis Tareas</a></li>
+                    <li><a href="#" onclick="showSection('calificaciones')">⭐ Mis Calificaciones</a></li>
+                    <li><a href="#" onclick="showSection('estadisticas')">📊 Mis Estadísticas</a></li>
+                </ul>
+            </div>
+
+            <div class="content">
+                <!-- Solicitudes Disponibles -->
+                <div id="solicitudes-section" class="section">
+                    <h2>Solicitudes Disponibles</h2>
+                    <div id="solicitudes-list" style="margin-top: 20px;"></div>
+                </div>
+
+                <!-- Mis Tareas -->
+                <div id="misTareas-section" class="section" style="display: none;">
+                    <h2>Mis Tareas en Progreso</h2>
+                    <div id="misTareas-list" style="margin-top: 20px;"></div>
+                </div>
+
+                <!-- Calificaciones -->
+                <div id="calificaciones-section" class="section" style="display: none;">
+                    <h2>Mis Calificaciones</h2>
+                    <div id="calificaciones-list" style="margin-top: 20px;"></div>
+                </div>
+
+                <!-- Estadísticas -->
+                <div id="estadisticas-section" class="section" style="display: none;">
+                    <h2>Mis Estadísticas</h2>
+                    <div id="estadisticas-content" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para aceptar solicitud -->
+    <div id="modalAceptar" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px;">
+            <h3>Aceptar Solicitud</h3>
+            <p id="modalText" style="margin: 15px 0; color: #64748b;"></p>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeModal()" class="btn btn-secondary" style="flex: 1;">Cancelar</button>
+                <button onclick="confirmarAceptar()" class="btn btn-success" style="flex: 1;">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 ARLINOST. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const usuario = JSON.parse(localStorage.getItem('usuario'));
+        let solicitudSeleccionada = null;
+
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        document.getElementById('userInfo').textContent = `🔧 ${usuario.usuario}`;
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('usuario');
+            window.location.href = '/';
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+            document.getElementById(section + '-section').style.display = 'block';
+
+            if (section === 'solicitudes') {
+                loadSolicitudesDisponibles();
+            } else if (section === 'misTareas') {
+                loadMisTareas();
+            } else if (section === 'calificaciones') {
+                loadMisCalificaciones();
+            } else if (section === 'estadisticas') {
+                loadMisEstadisticas();
+            }
+        }
+
+        async function loadSolicitudesDisponibles() {
+            try {
+                const response = await fetch('/api/solicitudes?estado=pendiente', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+
+                let html = '';
+                if (data.solicitudes.length === 0) {
+                    html = '<p style="color: #64748b;">No hay solicitudes pendientes en este momento.</p>';
+                } else {
+                    data.solicitudes.forEach(sol => {
+                        html += `
+                            <div class="card">
+                                <h3>${sol.descripcion}</h3>
+                                <p><strong>Cliente ID:</strong> ${sol.cliente_id}</p>
+                                <p><strong>Prioridad:</strong> ${'⭐'.repeat(sol.prioridad)}</p>
+                                <p style="color: #64748b; font-size: 14px;">Creada: ${new Date(sol.fecha_creacion).toLocaleDateString()}</p>
+                                <button onclick="openModalAceptar('${sol.solicitud_id}', '${sol.descripcion}')" class="btn btn-success" style="margin-top: 10px; width: 100%;">Aceptar Solicitud</button>
+                            </div>
+                        `;
+                    });
+                }
+                document.getElementById('solicitudes-list').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadMisTareas() {
+            try {
+                const response = await fetch('/api/solicitudes?estado=asignada', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+
+                let html = '';
+                if (data.solicitudes.length === 0) {
+                    html = '<p style="color: #64748b;">No tienes tareas en progreso. <a href="#" onclick="showSection(\'solicitudes\')" style="color: #6366f1; font-weight: 600;">Busca solicitudes aquí</a></p>';
+                } else {
+                    data.solicitudes.forEach(sol => {
+                        html += `
+                            <div class="card">
+                                <h3>${sol.descripcion}</h3>
+                                <p><strong>ID:</strong> ${sol.solicitud_id}</p>
+                                <span class="card-status status-active">EN PROGRESO</span>
+                                <div style="margin-top: 15px;">
+                                    <input type="number" id="progreso-${sol.solicitud_id}" placeholder="Progreso %" min="0" max="100" style="width: 70%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                                    <button onclick="actualizarProgreso('${sol.solicitud_id}')" class="btn btn-primary" style="margin-left: 5px; width: 28%;">Actualizar</button>
+                                </div>
+                                <button onclick="completarSolicitud('${sol.solicitud_id}')" class="btn btn-success" style="margin-top: 10px; width: 100%;">Completar</button>
+                            </div>
+                        `;
+                    });
+                }
+                document.getElementById('misTareas-list').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadMisCalificaciones() {
+            try {
+                const response = await fetch(`/api/prestadores/${usuario.usuario_id}/calificaciones`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+
+                let html = `
+                    <div class="card">
+                        <h3>Calificación Promedio</h3>
+                        <p style="font-size: 36px; color: #f59e0b; font-weight: bold;">
+                            ${'⭐'.repeat(Math.round(data.calificacion_promedio))} ${data.calificacion_promedio.toFixed(1)}
+                        </p>
+                        <p><strong>${data.total_calificaciones}</strong> calificaciones recibidas</p>
+                    </div>
+                `;
+
+                if (data.calificaciones.length > 0) {
+                    data.calificaciones.forEach(cal => {
+                        html += `
+                            <div class="card">
+                                <p><strong>De:</strong> ${cal.cliente_id}</p>
+                                <p><strong>Calificación:</strong> ${'⭐'.repeat(cal.calificacion)}</p>
+                                <p style="color: #64748b; font-style: italic;">"${cal.comentario}"</p>
+                                <p style="font-size: 12px; color: #94a3b8;">Fecha: ${new Date(cal.fecha).toLocaleDateString()}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<p style="color: #64748b; margin-top: 20px;">Aún no has recibido calificaciones.</p>';
+                }
+
+                document.getElementById('calificaciones-list').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadMisEstadisticas() {
+            try {
+                const response = await fetch('/api/estadisticas', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                const stats = data.estadisticas_sistema;
+
+                let html = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div class="card">
+                            <h4>📋 Total de Solicitudes</h4>
+                            <p style="font-size: 32px; color: #6366f1; font-weight: bold;">${stats.total_solicitudes}</p>
+                        </div>
+                        <div class="card">
+                            <h4>⏳ Pendientes</h4>
+                            <p style="font-size: 32px; color: #f59e0b; font-weight: bold;">${stats.solicitudes_pendientes}</p>
+                        </div>
+                        <div class="card">
+                            <h4>✅ Completadas</h4>
+                            <p style="font-size: 32px; color: #10b981; font-weight: bold;">${stats.solicitudes_completadas}</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('estadisticas-content').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function openModalAceptar(solicitudId, descripcion) {
+            solicitudSeleccionada = solicitudId;
+            document.getElementById('modalText').textContent = `¿Deseas aceptar esta solicitud?\n\n${descripcion}`;
+            document.getElementById('modalAceptar').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modalAceptar').style.display = 'none';
+            solicitudSeleccionada = null;
+        }
+
+        async function confirmarAceptar() {
+            try {
+                const response = await fetch(`/api/solicitudes/${solicitudSeleccionada}/asignar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ prestador_id: usuario.usuario_id })
+                });
+
+                if (response.ok) {
+                    alert('¡Solicitud aceptada exitosamente!');
+                    closeModal();
+                    loadSolicitudesDisponibles();
+                } else {
+                    alert('Error al aceptar la solicitud');
+                }
+            } catch (error) {
+                alert('Error de conexión');
+            }
+        }
+
+        async function actualizarProgreso(solicitudId) {
+            const progreso = document.getElementById(`progreso-${solicitudId}`).value;
+            if (!progreso) {
+                alert('Ingresa un porcentaje de progreso');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/solicitudes/${solicitudId}/progreso`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ porcentaje: parseInt(progreso) })
+                });
+
+                if (response.ok) {
+                    alert('Progreso actualizado');
+                    loadMisTareas();
+                }
+            } catch (error) {
+                alert('Error al actualizar el progreso');
+            }
+        }
+
+        async function completarSolicitud(solicitudId) {
+            const resultado = prompt('¿Cuál fue el resultado del trabajo?');
+            if (!resultado) return;
+
+            try {
+                const response = await fetch(`/api/solicitudes/${solicitudId}/completar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ resultado })
+                });
+
+                if (response.ok) {
+                    alert('¡Solicitud completada! El cliente puede calificarte ahora.');
+                    loadMisTareas();
+                }
+            } catch (error) {
+                alert('Error al completar la solicitud');
+            }
+        }
+
+        // Cargar solicitudes al iniciar
+        loadSolicitudesDisponibles();
+    </script>
+</body>
+</html>
